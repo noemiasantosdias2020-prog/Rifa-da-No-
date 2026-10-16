@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rifas da Nô</title>
+<style>
+:root{--bg:#fff8ef;--ink:#29211b;--red:#a52a22;--green:#247447;--gold:#f3c66a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+header{background:linear-gradient(135deg,#7e1c18,#c14a2c);color:white;text-align:center;padding:28px 16px}
+h1{margin:0;font-size:clamp(2rem,7vw,3.2rem)}header p{margin:8px 0 0}
+main{max-width:850px;margin:auto;padding:18px}
+.card{background:white;border-radius:18px;padding:18px;margin:14px 0;box-shadow:0 4px 18px #0000000d}
+.prize{display:grid;grid-template-columns:1fr;gap:10px}.tag{display:inline-block;background:#fff0cc;padding:7px 12px;border-radius:99px;font-weight:700}
+.grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.num{border:1px solid #d8c9b8;border-radius:9px;padding:10px 2px;background:#fffaf5;font-weight:700;cursor:pointer}
+.num.selected{background:var(--gold);border-color:#b98214}.num.reserved{background:#eee;color:#888;cursor:not-allowed;text-decoration:line-through}
+label{display:block;font-weight:650;margin:12px 0 5px}input{width:100%;padding:12px;border:1px solid #cdbfae;border-radius:9px;font:inherit}
+button,.button{display:inline-block;border:0;border-radius:10px;padding:12px 16px;background:var(--red);color:white;font-weight:750;font:inherit;cursor:pointer;text-decoration:none}
+button:disabled{opacity:.5;cursor:not-allowed}.secondary{background:var(--green)}.muted{color:#6f6258;font-size:.92rem}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+#notice{white-space:pre-wrap;margin-top:12px}.pixbox{background:#f7f1e8;padding:12px;border-radius:10px;overflow-wrap:anywhere}
+footer{text-align:center;padding:25px;color:#6f6258;font-size:.85rem}
+@media(min-width:600px){.grid{grid-template-columns:repeat(10,minmax(0,1fr))}.prize{grid-template-columns:1fr 1fr;align-items:center}}
+</style>
+</head>
+<body>
+<header><h1>Rifas da Nô</h1><p>Escolha seu número e participe! ❤️</p></header>
+<main>
+<section class="card prize">
+<div><span class="tag">PRÊMIO DA RIFA</span><h2>Kit churrasco + brinde</h2><p>100 números disponíveis para escolha. Boa sorte!</p></div>
+<div><p><strong>Valor por número: R$ 20,00</strong></p><p>Escolha um ou mais números na grade abaixo.</p><p class="muted">Esta é uma versão inicial demonstrativa. As escolhas ficam salvas somente neste aparelho até conectar um banco de dados on-line.</p></div>
+</section>
+<section class="card"><h2>1. Escolha seus números</h2><div class="row muted"><span>🟨 Selecionado</span><span>⬜ Disponível</span><span>⬛ Reservado neste aparelho</span></div><p id="selectedCount">Nenhum número selecionado.</p><div id="grid" class="grid" aria-label="Números da rifa"></div></section>
+<section class="card"><h2>2. Seus dados</h2><label for="name">Nome completo</label><input id="name" autocomplete="name" placeholder="Seu nome"><label for="phone">Telefone / WhatsApp</label><input id="phone" autocomplete="tel" inputmode="tel" placeholder="(11) 99999-9999"><div class="row" style="margin-top:14px"><button id="reserve">Registrar minha escolha</button><button id="clear" class="secondary">Limpar seleção</button></div><div id="notice" role="status"></div></section>
+<section class="card"><h2>3. Pagamento por Pix</h2><p>Chave Pix (CPF) informada pela organizadora:</p><div class="pixbox"><strong id="pix">Preencher chave Pix antes de publicar</strong></div><p class="muted">Antes de publicar, confira se a chave está correta e se deseja exibir seu CPF publicamente.</p><button id="copyPix" class="secondary">Copiar chave Pix</button><p id="pixStatus" class="muted"></p></section>
+<section class="card"><h2>Controle da organizadora</h2><p class="muted">Reservas registradas neste aparelho ficam abaixo. Para funcionar entre diferentes celulares, será necessário configurar um banco de dados compartilhado.</p><div id="orders"></div><div class="row" style="margin-top:12px"><button id="export" class="secondary">Baixar lista de reservas (CSV)</button><button id="reset" style="background:#655">Apagar dados deste aparelho</button></div></section>
+</main>
+<footer>Rifas da Nô · Confirme as regras aplicáveis à realização e divulgação da sua rifa antes de vendê-la.</footer>
+<script>
+const PIX_KEY = ""; // Preencha com a chave Pix apenas se desejar exibi-la publicamente.
+const KEY='rifas_da_no_v1';
+let chosen=new Set(), orders=JSON.parse(localStorage.getItem(KEY)||'[]');
+const grid=document.querySelector('#grid'), count=document.querySelector('#selectedCount'), notice=document.querySelector('#notice');
+document.querySelector('#pix').textContent=PIX_KEY||'Chave Pix ainda não configurada';
+function fmt(n){return String(n).padStart(3,'0')}
+function reservedSet(){return new Set(orders.flatMap(o=>o.numbers))}
+function render(){
+ grid.innerHTML='';let reserved=reservedSet();
+ for(let i=1;i<=100;i++){let n=fmt(i),b=document.createElement('button');b.className='num';b.textContent=n;
+ if(reserved.has(n)){b.classList.add('reserved');b.disabled=true}
+ else if(chosen.has(n))b.classList.add('selected');
+ b.onclick=()=>{if(chosen.has(n))chosen.delete(n);else chosen.add(n);render()};grid.appendChild(b)}
+ count.textContent=chosen.size?`Selecionado(s): ${[...chosen].sort().join(', ')} · Total: ${(chosen.size*20).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}`:'Nenhum número selecionado.';
+ renderOrders()
+}
+function renderOrders(){let el=document.querySelector('#orders');if(!orders.length){el.textContent='Nenhuma reserva registrada neste aparelho.';return}
+ el.innerHTML=orders.map(o=>`<div class="pixbox" style="margin:8px 0"><strong>${esc(o.name)}</strong> · ${esc(o.phone)}<br>Números: ${o.numbers.join(', ')}<br>Total: ${(o.numbers.length*20).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})} · Status: ${esc(o.status)} <button data-paid="${o.id}" class="secondary">Marcar pago</button></div>`).join('');
+ el.querySelectorAll('[data-paid]').forEach(b=>b.onclick=()=>{orders=orders.map(o=>o.id===b.dataset.paid?{...o,status:'Pago'}:o);save();render()})}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function save(){localStorage.setItem(KEY,JSON.stringify(orders))}
+document.querySelector('#reserve').onclick=()=>{let name=document.querySelector('#name').value.trim(),phone=document.querySelector('#phone').value.trim();
+ if(!chosen.size){notice.textContent='Selecione pelo menos um número.';return}if(!name||!phone){notice.textContent='Preencha nome e telefone.';return}
+ let reserved=reservedSet(),nums=[...chosen].sort();if(nums.some(n=>reserved.has(n))){notice.textContent='Um dos números já está reservado neste aparelho. Escolha novamente.';render();return}
+ orders.push({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),name,phone,numbers:nums,status:'Aguardando Pix'});save();chosen.clear();notice.textContent='Escolha registrada neste aparelho. A organizadora deve confirmar o pagamento manualmente.';render()};
+document.querySelector('#clear').onclick=()=>{chosen.clear();render();notice.textContent='Seleção limpa.'};
+document.querySelector('#copyPix').onclick=async()=>{if(!PIX_KEY){document.querySelector('#pixStatus').textContent='A chave ainda não foi configurada no arquivo.';return}try{await navigator.clipboard.writeText(PIX_KEY);document.querySelector('#pixStatus').textContent='Chave Pix copiada.'}catch(e){document.querySelector('#pixStatus').textContent='Copie a chave manualmente.'}};
+document.querySelector('#export').onclick=()=>{let rows=[['Nome','Telefone','Números','Total','Status'],...orders.map(o=>[o.name,o.phone,o.numbers.join(' '),o.numbers.length*20,o.status])];let csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\r\n');let a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}));a.download='reservas-rifas-da-no.csv';a.click();URL.revokeObjectURL(a.href)};
+document.querySelector('#reset').onclick=()=>{if(confirm('Apagar todas as reservas guardadas neste aparelho?')){orders=[];save();render();notice.textContent='Dados apagados.'}};
+render();
+</script>
+</body></html>
